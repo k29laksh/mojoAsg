@@ -1,50 +1,55 @@
-import React, { useState } from 'react';
-import FacebookLogin from 'react-facebook-login';
-import './App.css';
+import {useState} from 'react';
+import { signInWithPopup, FacebookAuthProvider } from "firebase/auth";
+import {auth, provider} from './FirebaseConfig';
 
 function App() {
 
-  // const [login, setLogin] = useState(false);
-  // const [data, setData] = useState({});
-  // const [picture, setPicture] = useState('');
+  const [user, setUser] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
 
-  // const responseFacebook = (response) => {
-  //   console.log(response);
-  //   setData(response);
-  //   setPicture(response.picture.data.url);
-  //   if (response.accessToken) {
-  //     setLogin(true);
-  //   } else {
-  //     setLogin(false);
-  //   }
-  // }
+  const handleFacebookLogin=()=>{
+    signInWithPopup(auth, provider).then((result)=>{
+      setUser(result.user);
+      // This gives you a Facebook Access Token. You can use it to access the Facebook API.
+      const credential = FacebookAuthProvider.credentialFromResult(result);
+      const accessToken = credential.accessToken;
+      // fetch facebook graph api to get user actual profile picture
+      fetch(`https://graph.facebook.com/${result.user.providerData[0].uid}/picture?type=large&access_token=${accessToken}`)
+      .then((response)=>response.blob())
+      .then((blob)=>{
+        setProfilePicture(URL.createObjectURL(blob));
+      })
+    }).catch((err)=>{
+      console.log(err);
+    })
+  }
+
+  const handleLogout=()=>{
+    setUser(null);
+  }
 
   return (
-    <div class="container">
-      {/* <div style={{ width: '600px' }}>
-        <h1>
-          {
-           <FacebookLogin
-              appId="414597001568100"
-              autoLoad={true}
-              fields="name,email,picture"
-              scope="public_profile" 
-              callback={responseFacebook}
-              icon="fa-facebook" />
-          }
-          {login &&
-            <img src={picture} roundedCircle />
-          }
-        </h1>
-        {login &&
-          <div>
-            <p>{data.name}</p>
-            <div>
-              {data.email}
-            </div>
-          </div>
-        }
-      </div> */}
+    <div className="wrapper">
+      <div className='box'>
+        {user?(
+              <>
+                <button className='btn btn-secondary btn-md'
+                  onClick={handleLogout}>
+                  LOGOUT
+                </button>
+                <h3>Welcome {user.displayName}</h3>
+                <p>{user.email}</p>
+                <div className='photo'>
+                  <img src={profilePicture} alt="dp" referrerPolicy='no-referrer'/>
+                </div>
+              </>
+            ):(
+              <button className="btn btn-primary btn-md"
+                onClick={handleFacebookLogin}>
+                  Sign In With Facebook
+              </button>
+           )} 
+      </div>
     </div>
   );
 }
